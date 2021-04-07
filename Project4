@@ -1,0 +1,184 @@
+//Importing the application to test
+let server = require('../index');
+
+//These are the actual modules we use
+let chai = require('chai');
+let should = chai.should();
+let chaiHttp = require('chai-http');
+chai.use(chaiHttp);
+
+let apiUrl = "http://localhost:3000";
+
+describe('Endpoint tests', () => {
+    let randomboard ={'id':'id','name':'RandomName', 'description':"RandomDescription"};
+    let newrandomboard ={'id':'newid', 'name':'NewRandomName', 'description':"NewRandomDescription"};
+    let RandomTask = { 'id':'id', 'boardId':'0', 'taskName': "A task", 'dateCreated':'somedate', 'archived': false }
+    //###########################
+    //The beforeEach function makes sure that before each test, 
+    //there are exactly two boards and one task (for the first board).
+    //###########################
+    beforeEach((done) => {
+        server.resetState();
+        done();
+    });
+    //###########################
+    //Write your tests below here
+    //###########################
+    it('1. GET /api/v1/boards', function (done) {
+        chai.request('http://localhost:3000/api/v1')
+        .get('/boards')
+        .end((err, res) => {
+            chai.expect(res).to.have.status(200);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('array');
+            chai.expect(res.body[0]).to.be.an('object');
+            chai.expect(res.body[1]).to.be.an('object');
+            chai.expect(res.body[0]).to.have.property('id').eql('0');
+            chai.expect(res.body[1]).to.have.property('id').eql('1');
+            chai.expect(Object.keys(res.body).length).to.be.eql(2);
+            done();
+        });
+    });
+
+    it('2. GET /api/v1/boards/:boardId', function (done) {
+        //virkar ekki að fá upp individual board á postman
+        chai.request('http://localhost:3000/api/v1')
+        .get('/boards/0')
+        .end((err, res) => {
+            chai.expect(res).to.have.status(200);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('object');
+            chai.expect(res.body).to.have.property('id').eql('0')
+            chai.expect(res.body).to.have.property('name').eql('Planned')
+            chai.expect(res.body).to.have.property('description').eql('My todo list.')
+            chai.expect(res.body).to.have.property('tasks').eql(["0"])
+            chai.expect(Object.keys(res.body).length).to.be.eql(4);
+            done();
+        });
+    });
+
+    it('3. POST /api/v1/boards', function (done) {
+        chai.request('http://localhost:3000/api/v1')
+        .post('/boards')
+        .set('Content-type','application/json')
+        .send (randomboard)
+        .end((err, res) => {
+            chai.expect(res).to.have.status(201);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('object');
+            chai.expect(res.body).to.have.property('id').eql(2);
+            chai.expect(res.body).to.have.property('name').eql('RandomName');
+            chai.expect(res.body).to.have.property('description').eql('RandomDescription');  
+            chai.expect(Object.keys(res.body).length).to.be.eql(4);
+            done(); 
+        });
+    }); 
+
+    it('4. PUT /api/v1/boards/:boardId', function (done) {
+        chai.request('http://localhost:3000/api/v1/boards/')
+        .put('1')
+        .set('Content-type','application/json')
+        .send(newrandomboard)
+        .end((err, res) => {
+            chai.expect(res).to.have.status(200); 
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('object');
+            chai.expect(res.body).to.have.property('id').eql('1');
+            chai.expect(res.body).to.have.property('name').eql('NewRandomName');
+            chai.expect(res.body).to.have.property('description').eql('NewRandomDescription');
+            chai.expect(res.body).to.have.property('tasks').eql([]);
+            chai.expect(Object.keys(res.body).length).to.be.eql(4);
+            done();
+        });
+    }); 
+
+    it('5. GET /api/v1/boards/:boardId/tasks', function (done) {
+        chai.request('http://localhost:3000/api/v1/boards/0').get('/tasks').end((err, res) => {
+            chai.expect(res).to.have.status(200);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('array');
+            chai.expect(res.body[0]).to.be.an('object');
+            chai.expect(res.body[0]).to.have.property('id').eql('0')
+            chai.expect(res.body[0]).to.have.property('boardId').eql('0')
+            chai.expect(res.body[0]).to.have.property('taskName').eql('A task')
+            chai.expect(res.body[0]).to.have.property('dateCreated').eql('2021-01-21T15:48:00.000Z')
+            chai.expect(res.body[0]).to.have.property('archived').eql(false)
+            chai.expect(Object.keys(res.body).length).to.be.eql(1);
+
+            done();
+        });
+    }); 
+
+    it('6. GET /api/v1/boards/:boardId/tasks/:taskId', function (done) {
+        chai.request('http://localhost:3000/api/v1/boards/0/tasks/').get('0').end((err, res) => {
+            chai.expect(res).to.have.status(200);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('object');
+            chai.expect(res.body).to.have.property('id').eql('0');
+            chai.expect(res.body).to.have.property('boardId').eql('0');
+            chai.expect(res.body).to.have.property('taskName').eql('A task');
+            chai.expect(res.body).to.have.property('dateCreated').eql(1611244080000);
+            chai.expect(res.body).to.have.property('archived').eql(false);
+            chai.expect(Object.keys(res.body).length).to.be.eql(5);
+            done();
+        });
+    });
+
+    it('7. POST /api/v1/boards/:boardId/tasks', function (done) {
+        chai.request('http://localhost:3000/api/v1/boards/0')
+        .post('/tasks')
+        .set('Content-type','application/json')
+        .send (RandomTask)
+        .end((err, res) => {
+            chai.expect(res).to.have.status(201);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('object');
+            chai.expect(res.body).to.have.property('id').eql('1');
+            chai.expect(res.body).to.have.property('boardId').eql('0');
+            chai.expect(res.body).to.have.property('taskName').eql("A task");
+            chai.expect(res.body).to.have.property('dateCreated');
+            chai.expect(res.body).to.have.property('archived').eql(false);
+            chai.expect(Object.keys(res.body).length).to.be.eql(5);
+
+            done(); 
+        });
+    });
+    
+    it('9. POST /api/v1/auth', function (done) {
+        chai.request('http://localhost:3000/api/v1/')
+        .post('auth')
+        .set('Authorization',"Basic " + Buffer.from('admin:secret').toString('base64'))
+        .send({})
+        .end((err, res) => {
+            chai.expect(res).to.have.status(200);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('object');
+            chai.expect(res.body).to.have.property('token');
+            let bearerToken = "Bearer " + res.body.token;
+            chai.request('http://localhost:3000/api/v1/boards/')
+            .delete('1')
+            .set('Authorization', bearerToken)
+            .end((err, res) => {
+                chai.expect(res).to.have.status(200);
+                chai.expect(res).to.be.json;
+                done();
+            });
+        });
+    });
+
+    it('10. PUT /api/v1/boards/:boardId', function (done) {
+        chai.request('http://localhost:3000/api/v1/boards/')
+        .put('1')
+        .set('Content-type','application/json')
+        .send({'name':'NewRandomName'})
+        .end((err, res) => {
+            chai.expect(res).to.have.status(400);
+            chai.expect(res).to.be.json;
+            chai.expect(res.body).to.be.an('object');
+            chai.expect(res.body).to.have.property('message').eql("To update a board, all attributes are needed (name and description).");
+            chai.expect(Object.keys(res.body).length).to.be.eql(1);
+            done();
+        });
+    });
+
+});
